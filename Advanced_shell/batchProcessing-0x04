@@ -1,37 +1,49 @@
 #!/bin/bash
 
-# List of Pokémon to fetch data for
-POKEMON_LIST=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
-API_URL="https://pokeapi.co/api/v2/pokemon"
+# List of Pokémon names
+pokemon_list=("bulbasaur" "ivysaur" "venusaur" "charmander" "charmeleon")
 
-# Function to fetch data for a Pokémon and save it to a JSON file
+# Pokémon API URL
+api_url="https://pokeapi.co/api/v2/pokemon/"
+
+# Function to fetch Pokémon data
 fetch_pokemon_data() {
-    pokemon_name=$1
-    json_file="${pokemon_name}.json"
+    local pokemon_name="$1"
+    local formatted_name=$(echo "$pokemon_name" | awk '{print tolower($0)}')
 
-    # Make API request and save the response to a JSON file
-    curl -s "$API_URL/$pokemon_name" -o "$json_file"
-    if [[ $? -eq 0 ]]; then
-        echo "Data for $pokemon_name retrieved successfully."
+    # Send a request and save response to the respective JSON file
+    response=$(curl -s -w "%{http_code}" -o "${formatted_name}.json" "${api_url}${formatted_name}")
+
+    # Check for successful response
+    if [[ "$response" -eq 200 ]]; then
+        echo "Data for $pokemon_name saved to ${formatted_name}.json"
     else
-        echo "Failed to retrieve data for $pokemon_name."
+        echo "Failed to fetch data for $pokemon_name. HTTP Status: $response" >> errors.txt
+        rm -f "${formatted_name}.json"
     fi
 }
 
-# Start background processes for fetching data for each Pokémon
-for pokemon in "${POKEMON_LIST[@]}"; do
-    fetch_pokemon_data "$pokemon" &  # Run each fetch in the background
+# Array to track background processes
+pids=()
+
+# Loop over the Pokémon list and process each in parallel
+for pokemon in "${pokemon_list[@]}"; do
+    fetch_pokemon_data "$pokemon" &  # Run the fetch in the background
+    pids+=($!)  # Save the background process ID
+    sleep 1  # Optional delay to avoid rate-limiting
 done
 
-# Monitor background jobs
+# Wait for all background jobs to complete and handle errors
+for pid in "${pids[@]}"; do
+    wait $pid  # Wait for each process to complete
+    if [[ $? -ne 0 ]]; then  # Check if the process failed
+        echo "Process $pid failed. Killing process..." 
+        kill $pid  # Kill the failed process
+    fi
+done
+
+# List all background jobs that have been processed
 jobs
 
-# Wait for all background processes to complete
-wait
-
-# After waiting for processes to complete, check for any failed jobs
-jobs -l | grep -E 'Exited|Done' || echo "All jobs completed successfully."
-
-# Proceed with the next step after all data is fetched
-echo "All Pokémon data fetched. Proceeding with further processing..."
-
+# Final confirmation
+echo "All requests completed."
