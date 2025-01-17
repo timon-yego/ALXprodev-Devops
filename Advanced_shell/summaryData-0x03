@@ -39,6 +39,9 @@ if [[ -s $CSV_FILE ]]; then
             print "\nNo data to calculate averages."
         }
     }' "$CSV_FILE"
+
+    echo "$avg_result" | sed 's/Average Height/Avg Height/g' | sed 's/Average Weight/Avg Weight/g'
+    
 else
     echo "No data files found to process."
 fi
