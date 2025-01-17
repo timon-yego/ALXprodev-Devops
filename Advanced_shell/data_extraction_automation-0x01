@@ -16,7 +16,7 @@ weight=$(jq -r '.weight' "$INPUT_FILE" | awk '{print $1/10}') # Convert hectogra
 type=$(jq -r '.types[0].type.name' "$INPUT_FILE") # Assume primary type is the first one
 
 # Format the output
-output=$(echo "$name is of type $type, weighs ${weight}kg, and is ${height}m tall." | sed 's/^./\U&/')
+output=$(echo "$name is of type $type, weighs ${formatted_weight}kg, and is ${formatted_height}m tall." | sed 's/^./\U&/')
 
 # Display the result
 echo "$output"
