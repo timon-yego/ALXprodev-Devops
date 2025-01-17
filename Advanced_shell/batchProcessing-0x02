@@ -9,25 +9,44 @@ BASE_URL="https://pokeapi.co/api/v2/pokemon"
 # Delay in seconds between requests to handle rate-limiting
 DELAY=2
 
+# Maximum number of retry attempts for failed requests
+MAX_RETRIES=3
+
 # Loop through each Pokémon in the list
 for pokemon in "${POKEMON_LIST[@]}"; do
     # Output filename
     OUTPUT_FILE="${pokemon}.json"
+    RETRIES=0
+    SUCCESS=false
 
-    # Make the API request
     echo "Fetching data for $pokemon..."
-    response=$(curl -s -w "%{http_code}" -o "$OUTPUT_FILE" "$BASE_URL/$pokemon")
 
-    # Check if the request was successful (HTTP 200)
-    if [[ $response -ne 200 ]]; then
-        echo "Failed to fetch data for $pokemon. HTTP status code: $response" >> errors.txt
+    # Retry loop
+    while [[ $RETRIES -lt $MAX_RETRIES ]]; do
+        # Make the API request
+        response=$(curl -s -w "%{http_code}" -o "$OUTPUT_FILE" "$BASE_URL/$pokemon")
+        http_code=$(tail -c 3 <<<"$response")  # Extract HTTP status code from response
+
+        if [[ $http_code -eq 200 ]]; then
+            echo "Data for $pokemon saved to $OUTPUT_FILE."
+            SUCCESS=true
+            break
+        else
+            ((RETRIES++))
+            echo "Attempt $RETRIES for $pokemon failed. HTTP status code: $http_code"
+            sleep $DELAY  # Wait before retrying
+        fi
+    done
+
+    # Handle failure after all retries
+    if [[ $SUCCESS == false ]]; then
+        echo "Failed to fetch data for $pokemon after $MAX_RETRIES attempts. Logging error."
+        echo "Failed to fetch data for $pokemon. HTTP status code: $http_code" >> errors.txt
         # Remove incomplete or empty file
         rm -f "$OUTPUT_FILE"
-    else
-        echo "Data for $pokemon saved to $OUTPUT_FILE."
     fi
 
-    # Delay before the next request
+    # Delay before the next Pokémon
     sleep $DELAY
 done
 
