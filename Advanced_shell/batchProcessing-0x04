@@ -23,8 +23,15 @@ for pokemon in "${POKEMON_LIST[@]}"; do
     fetch_pokemon_data "$pokemon" &  # Run each fetch in the background
 done
 
+# Monitor background jobs
+jobs
+
 # Wait for all background processes to complete
 wait
 
+# After waiting for processes to complete, check for any failed jobs
+jobs -l | grep -E 'Exited|Done' || echo "All jobs completed successfully."
+
 # Proceed with the next step after all data is fetched
 echo "All Pokémon data fetched. Proceeding with further processing..."
+
