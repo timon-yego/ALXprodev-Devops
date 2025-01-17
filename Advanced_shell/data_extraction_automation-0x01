@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Input JSON file
+INPUT_FILE="data.json"
+
+# Check if the file exists
+if [ ! -f "$INPUT_FILE" ]; then
+    echo "Error: $INPUT_FILE not found. Please run the fetch script first."
+    exit 1
+fi
+
+# Extract data using jq
+name=$(jq -r '.name' "$INPUT_FILE")
+height=$(jq -r '.height' "$INPUT_FILE" | awk '{print $1/10}') # Convert decimeters to meters
+weight=$(jq -r '.weight' "$INPUT_FILE" | awk '{print $1/10}') # Convert hectograms to kilograms
+type=$(jq -r '.types[0].type.name' "$INPUT_FILE") # Assume primary type is the first one
+
+# Format the output
+output=$(echo "$name is of type $type, weighs ${weight}kg, and is ${height}m tall." | sed 's/^./\U&/')
+
+# Display the result
+echo "$output"
