@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# List of Pokémon to retrieve
+POKEMON_LIST=("Bulbasaur" "Ivysaur" "Venusaur" "Charmander" "Charmeleon")
+
+# Base URL for the Pokémon API
+BASE_URL="https://pokeapi.co/api/v2/pokemon"
+
+# Delay in seconds between requests to handle rate-limiting
+DELAY=2
+
+# Loop through each Pokémon in the list
+for pokemon in "${POKEMON_LIST[@]}"; do
+    # Convert Pokémon name to lowercase for API compatibility
+    lower_case_name=$(echo "$pokemon" | awk '{print tolower($0)}')
+    
+    # Output filename
+    OUTPUT_FILE="${lower_case_name}.json"
+
+    # Make the API request
+    echo "Fetching data for $pokemon..."
+    response=$(curl -s -w "%{http_code}" -o "$OUTPUT_FILE" "$BASE_URL/$lower_case_name")
+
+    # Check if the request was successful (HTTP 200)
+    if [[ $response -ne 200 ]]; then
+        echo "Failed to fetch data for $pokemon. HTTP status code: $response" >> errors.txt
+        # Remove incomplete or empty file
+        rm -f "$OUTPUT_FILE"
+    else
+        echo "Data for $pokemon saved to $OUTPUT_FILE."
+    fi
+
+    # Delay before the next request
+    sleep $DELAY
+done
+
+echo "Batch Pokémon data retrieval complete."
